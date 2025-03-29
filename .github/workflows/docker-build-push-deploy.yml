@@ -1,0 +1,40 @@
+name: Fetch and Execute Script from S3
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+      - beta
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    env:
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      S3_BUCKET: ${{ secrets.S3_BUCKET }}
+      S3_KEY: ${{ secrets.S3_KEY }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          path: micro-service-ECS
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Fetch and execute script from S3
+        run: |
+          aws s3 cp s3://$S3_BUCKET/$S3_KEY ./script.sh
+          chmod +x ./script.sh
+          ./script.sh
+
+      - name: Deploy to ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ secrets.ECS_TASK_DEFINITION }}
+          service: ${{ secrets.ECS_SERVICE_NAME }}
+          cluster: ${{ secrets.ECS_CLUSTER_NAME }}
+          wait-for-service-stability: true

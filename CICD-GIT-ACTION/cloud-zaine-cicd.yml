@@ -1,0 +1,33 @@
+name: Build, Push, and Deploy Docker Image
+
+on:
+  push:
+    branches:
+      - main
+      - beta
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    env:
+      S3_BUCKET: ${{ secrets.S3_BUCKET }}
+      ENV_SCRIPT_KEY: "path/to/env.sh"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          path: micro-service-ECS
+
+      - name: Fetch and execute environment script
+        run: |
+          aws s3 cp s3://$S3_BUCKET/$ENV_SCRIPT_KEY ./env.sh
+          chmod +x ./env.sh
+          ./env.sh ${{ github.ref_name }}
+
+      - name: Fetch and execute main script from S3
+        run: |
+          aws s3 cp s3://$S3_BUCKET/$S3_KEY ./bash.sh
+          chmod +x ./bash.sh
+          ./bash.sh
